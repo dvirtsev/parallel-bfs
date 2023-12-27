@@ -2,14 +2,10 @@ package hw.dvirtsev.bfs
 
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.RecursiveAction
-import kotlin.math.ceil
-import kotlin.math.floor
-import kotlin.math.log2
-import kotlin.math.roundToInt
 
 class PrefixSum(
     initialArray: IntArray,
-    private val threadPoolSize: Int,
+    threadPoolSize: Int,
     private val blockSize: Int = 128,
 ) {
     private val prefixSum = IntArray(initialArray.size) { 0 }
@@ -36,7 +32,6 @@ class PrefixSum(
     ) : RecursiveAction() {
 
         override fun compute() {
-            //println("Sum tree thread: ${Thread.currentThread().name}")
             if (left >= right) {
                 return
             }
@@ -66,7 +61,6 @@ class PrefixSum(
     ) : RecursiveAction() {
 
         override fun compute() {
-            //println("Prefix sum thread: ${Thread.currentThread().name}")
             if (left >= right) {
                 return
             }

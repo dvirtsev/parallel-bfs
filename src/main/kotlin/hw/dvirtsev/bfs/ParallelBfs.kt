@@ -73,48 +73,34 @@ class ParallelBfs(private val threadPoolSize: Int = 4) : Bfs {
     }
 
     private class ParallelFilter(
-        private val threadPoolSize: Int,
+        threadPoolSize: Int,
         private val initialArray: IntArray,
         private val filterAction: (Int) -> Boolean,
     ) {
         val result: IntArray
 
         init {
-            Executors.newFixedThreadPool(threadPoolSize).use { service ->
-                val arrays = List(threadPoolSize) { mutableListOf<Int>() }
-                val filterTasks = (0..<threadPoolSize).map {
-                    Callable {
-                        parallelFilterAction(it, arrays[it])
+            if (initialArray.isEmpty()) {
+                result = IntArray(0)
+            } else {
+                val flags = initialArray.clone()
+                ParallelFor(threadPoolSize, 0..flags.size) {
+                    if (filterAction.invoke(flags[it])) {
+                        flags[it] = 1
+                    } else {
+                        flags[it] = 0
                     }
                 }
-                service.invokeAll(filterTasks)
 
-                val resultSize = arrays.sumOf { it.size }
-                result = IntArray(resultSize)
-                val startIndexes = IntArray(arrays.size) { 0 }
-                (1..<arrays.size).map { startIndexes[it] = startIndexes[it - 1] + arrays[it - 1].size }
-                val mergeTasks = (0..<threadPoolSize).map {
-                    Callable {
-                        parallelMergeAction(arrays[it], startIndexes[it])
+                val prefSumOnFlags = PrefixSum(flags, threadPoolSize).asList()
+
+                result = IntArray(prefSumOnFlags.last())
+
+                ParallelFor(threadPoolSize, 0..prefSumOnFlags.size) {
+                    if (flags[it] == 1) {
+                        result[prefSumOnFlags[it] - 1] = initialArray[it]
                     }
                 }
-                service.invokeAll(mergeTasks)
-            }
-        }
-
-        private fun parallelFilterAction(start: Int, filterResult: MutableList<Int>) {
-            var curIndex = start
-            while (curIndex < initialArray.size) {
-                if (filterAction.invoke(initialArray[curIndex])) {
-                    filterResult.add(initialArray[curIndex])
-                }
-                curIndex += threadPoolSize
-            }
-        }
-
-        private fun parallelMergeAction(filterResult: MutableList<Int>, startIndex: Int) {
-            filterResult.forEachIndexed { index, number ->
-                result[startIndex + index] = number
             }
         }
     }
